@@ -1,67 +1,85 @@
+/** @jsx React.DOM */
 'use strict';
-var page = require('page');
+
+var React = require('react');
 var request = require('superagent');
-var mustache = require('mustache');
 
-var content = document.querySelector('#content');
-
-var listTemplate =
-  '<h1>Early GitHub Users</h1>' +
-  '<ul>' +
-    '{{#.}}' +
-    '<li>' +
-      '<a href="/user/{{id}}">{{login}}</a>' +
-    '</li>' +
-    '{{/.}}' +
-  '</ul>';
-
-var showTemplate =
-  '<h1>User {{login}}</h1>' +
-  '<p>{{name}} is user number {{id}}.' +
-  'He has {{followers}} followers, ' +
-  '{{public_repos}} public repos and writes a blog at' +
-  '<a href="{{blog}}">{{blog}}</a>.' +
-  '<a href="/">Back to list</a>.</p>';
-
-page('/', loadUsers, showUsers);
-page('/user/:id', loadUser, showUser);
-page.start();
-
-function loadUsers (ctx, next) {
-  if (ctx.state.users) {
-    // cache hit!
-    next();
-  } else {
-    // not cached; make the request
-    request('https://api.github.com/users', function (res) {
-      var users = res.body;
-      ctx.state.users = users;
-      ctx.save();
-      next();
+var ListUsers = React.createClass({
+  render: function () {
+    var users = this.props.users.map(function (user) {
+      return (
+        <li><a href={'/user/' + user.id}>{user.login}</a></li>
+      );
     });
+    return (
+      <div class="content">
+        <h1>Early GitHub Users</h1>
+        <ul>{users}</ul>
+      </div>
+    );
   }
-}
+});
 
-function loadUser (ctx, next) {
-  if (ctx.state.user) {
-    next();
-  } else {
-    var id = ctx.params.id;
-    request('https://api.github.com/user/' + id, function (res) {
-      var user = res.body;
-      ctx.state.user = user;
-      ctx.save();
-      next();
-    });
+var ShowUser = React.createClass({
+  render: function () {
+    var user = this.props.user;
+    return (
+      <div class="content">
+        <h1>User {user.login}</h1>
+        <p>{user.name} is user number {user.id}.</p>
+        <p>He has {user.followers} followers, {user.public_repos} public repos and writes a blog at <a href={user.blog}>{user.blog}</a>.</p>
+        <p><a href="/">Back to list</a>.</p>
+      </div>
+    )
   }
-}
+});
 
-function showUsers (ctx) {
-  var users = ctx.state.users;
-  content.innerHTML = mustache.render(listTemplate, users);
-}
+var App = React.createClass({
+  getInitialState: function () {
+    return {
+      page: <div/>
+    };
+  },
+  componentDidMount: function () {
+    this.page = require('page');
+    this.page('/', this.loadUsers);
+    this.page('/user/:id', this.loadUser);
+    this.page();
+  },
+  componentWillUnmount: function () {
+    this.page.stop();
+  },
+  loadUsers: function (ctx) {
+    if (!ctx.state.users) {
+      // not cached; make the request
+      request('https://api.github.com/users', function (res) {
+        var users = res.body;
+        ctx.state.users = users;
+        ctx.save();
+        this.setState({
+          users: users,
+          page: <ListUsers users={users}/>
+        });
+      }.bind(this));
+    }
+  },
+  loadUser: function (ctx) {
+    if (!ctx.state.user) {
+      var id = ctx.params.id;
+      request('https://api.github.com/user/' + id, function (res) {
+        var user = res.body;
+        ctx.state.user = user;
+        ctx.save();
+        this.setState({
+          user: user,
+          page: <ShowUser user={user}/>
+        });
+      }.bind(this));
+    }
+  },
+  render: function () {
+    return this.state.page;
+  }
+});
 
-function showUser (ctx) {
-  var user = ctx.state.user;
-  content.innerHTML = mustache.render(showTemplate, user);
-}
+React.renderComponent(<App/>, document.body);
