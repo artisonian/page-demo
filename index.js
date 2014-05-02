@@ -1,9 +1,11 @@
 'use strict';
 
-var PORT = process.env.PORT || 3000;
-var OUTPUT = process.argv[2] || (__dirname + '/public/bundle.js');
-
 var fs = require('fs');
+var path = require('path');
+
+var PORT = process.env.PORT || 3000;
+var OUTPUT = process.argv[2] || path.join(__dirname, 'public', 'bundle.js');
+
 var connect = require('connect');
 var watchify = require('watchify');
 var reactify = require('reactify');
@@ -11,10 +13,10 @@ var reactify = require('reactify');
 connect()
   .use(connect.favicon())
   .use(connect.logger('dev'))
-  .use(connect.static(__dirname + '/public'))
+  .use(connect.static(path.join(__dirname, 'public')))
   .listen(+PORT);
 
-var watch = watchify(__dirname + '/app.js');
+var watch = watchify(path.join(__dirname, 'app.js'));
 var build = function () {
   watch
     .transform(reactify)

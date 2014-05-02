@@ -1,4 +1,8 @@
 {
+  "name": "page-demo",
+  "description": "Toby Ho's Page demo ported to React",
+  "author": "Leroy Campbell",
+  "version": "0.0.1",
   "dependencies": {
     "envify": "^1.2.1",
     "page": "^1.3.7",
