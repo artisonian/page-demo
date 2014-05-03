@@ -8,11 +8,11 @@ var ListUsers = React.createClass({
   render: function () {
     var users = this.props.users.map(function (user) {
       return (
-        <li><a href={'/user/' + user.id}>{user.login}</a></li>
+        <li key={'user' + user.id}><a href={'/user/' + user.id}>{user.login}</a></li>
       );
     });
     return (
-      <div class="content">
+      <div className="content">
         <h1>Early GitHub Users</h1>
         <ul>{users}</ul>
       </div>
@@ -24,7 +24,7 @@ var ShowUser = React.createClass({
   render: function () {
     var user = this.props.user;
     return (
-      <div class="content">
+      <div className="content">
         <h1>User {user.login}</h1>
         <p>{user.name} is user number {user.id}.</p>
         <p>He has {user.followers} followers, {user.public_repos} public repos and writes a blog at <a href={user.blog}>{user.blog}</a>.</p>
@@ -37,7 +37,8 @@ var ShowUser = React.createClass({
 var App = React.createClass({
   getInitialState: function () {
     return {
-      page: <div/>
+      user: {},
+      page: null
     };
   },
   componentDidMount: function () {
@@ -50,35 +51,52 @@ var App = React.createClass({
     this.page.stop();
   },
   loadUsers: function (ctx) {
-    if (!ctx.state.users) {
+    if (!this.state.users) {
       // not cached; make the request
       request('https://api.github.com/users', function (res) {
         var users = res.body;
-        ctx.state.users = users;
-        ctx.save();
         this.setState({
+          params: ctx.params,
           users: users,
-          page: <ListUsers users={users}/>
+          page: 'list'
         });
       }.bind(this));
+    } else {
+      this.setState({
+        params: ctx.params,
+        page: 'list'
+      });
     }
   },
   loadUser: function (ctx) {
-    if (!ctx.state.user) {
-      var id = ctx.params.id;
+    var id = ctx.params.id;
+    if (!this.state.user[id]) {
       request('https://api.github.com/user/' + id, function (res) {
-        var user = res.body;
-        ctx.state.user = user;
-        ctx.save();
+        var user = this.state.user;
+        var info = res.body;
+        user[id] = info;
         this.setState({
+          params: ctx.params,
           user: user,
-          page: <ShowUser user={user}/>
+          page: 'show'
         });
       }.bind(this));
+    } else {
+      this.setState({
+        params: ctx.params,
+        page: 'show'
+      });
     }
   },
   render: function () {
-    return this.state.page;
+    switch (this.state.page) {
+    case 'list':
+      return <ListUsers users={this.state.users}/>;
+    case 'show':
+      return <ShowUser user={this.state.user[this.state.params.id]}/>;
+    default:
+      return <div/>
+    };
   }
 });
 
